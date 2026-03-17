@@ -184,19 +184,19 @@ hr.div{border:none;border-top:1px solid var(--bdr);margin:.875rem 0;}
       <div class="plan-icon">🔧</div>
       <div class="plan-name" style="color:var(--grn)">BÁSICO</div>
       <div class="plan-desc">Preventivo programado</div>
-      <div class="plan-inc" style="background:rgba(45,184,122,.1);color:var(--grn)">MO prev. + Desplazamiento</div>
+      <div class="plan-inc" style="background:rgba(45,184,122,.1);color:var(--grn)">MO prev. + Desplazamiento + ATR</div>
     </button>
     <button type="button" class="plan-card" id="plan-std" onclick="setPlan('std')">
       <div class="plan-icon">⚙️</div>
       <div class="plan-name" style="color:var(--blu)">ESTÁNDAR</div>
       <div class="plan-desc">Preventivo + correctivo</div>
-      <div class="plan-inc" style="background:rgba(58,143,232,.1);color:var(--blu)">MO prev.+corr. + Desplaz.</div>
+      <div class="plan-inc" style="background:rgba(58,143,232,.1);color:var(--blu)">MO prev.+corr. + Desplaz. + ATR</div>
     </button>
     <button type="button" class="plan-card" id="plan-prm" onclick="setPlan('prm')">
       <div class="plan-icon">🏆</div>
       <div class="plan-name" style="color:var(--pur)">PREMIUM</div>
       <div class="plan-desc">Cobertura total con cuota base</div>
-      <div class="plan-inc" style="background:rgba(167,139,250,.1);color:var(--pur)">% base + MO + Desplaz.</div>
+      <div class="plan-inc" style="background:rgba(167,139,250,.1);color:var(--pur)">% base + MO + Desplaz. + ATR</div>
     </button>
   </div>
 </div>
@@ -233,6 +233,11 @@ hr.div{border:none;border-top:1px solid var(--bdr);margin:.875rem 0;}
     <div class="f">
       <label>Modelo específico</label>
       <input type="text" id="agv-modelo" placeholder="Ej: MOUSE-200, TB-60...">
+    </div>
+    <div class="f">
+      <label>Marca</label>
+      <input type="text" id="agv-marca" value="SYNERSIGHT" placeholder="Ej: SYNERSIGHT" oninput="onMarcaChange()">
+      <div class="ftip" id="marca-tip" style="color:var(--grn)">✓ Porcentajes estándar</div>
     </div>
     <div class="f">
       <label>Valor de venta (€)</label>
@@ -399,7 +404,7 @@ hr.div{border:none;border-top:1px solid var(--bdr);margin:.875rem 0;}
     <div class="frow">
       <div class="f"><label>Ciudad origen</label><input type="text" id="c-org" placeholder="Ej: Valladolid"></div>
       <div class="f"><label>Ciudad destino</label><input type="text" id="c-dst" placeholder="Ej: Barcelona"></div>
-      <div class="f"><label>Tarifa (€/km)</label><input type="number" id="c-rate" value="0.26" step="0.01" min="0" ></div>
+      <div class="f"><label>Tarifa (€/km)</label><input type="number" id="c-rate" value="1.10" step="0.01" min="0" ></div>
     </div>
     <div class="frow">
       <div class="f"><label>Distancia ida+vuelta (km)</label><input type="number" id="c-km" placeholder="0" min="0" ><div class="ftip">Introduce distancia total (ida + vuelta)</div></div>
@@ -558,9 +563,32 @@ function onRentalChange(){
   recalc();
 }
 function updSum(){var vp=parseInt(document.getElementById('v-prev').value)||0;var vc=parseInt(document.getElementById('v-corr').value)||0;if(vp||vc){document.getElementById('v-sum').style.display='grid';document.getElementById('vp-n').textContent=vp;document.getElementById('vc-n').textContent=vc;document.getElementById('vt-n').textContent=vp+vc;}}
-function updPct(){var p=PCT[ENV]&&PCT[ENV][SH];document.getElementById('pct-v').textContent=p?p.toFixed(1)+'%':'—';document.getElementById('pct-d').textContent=ENV_D[ENV]||'';}
+function getMarcaSurcharge(){
+  var marca=(document.getElementById('agv-marca').value||'').trim().toUpperCase();
+  return marca==='SYNERSIGHT'?0:2;
+}
+function onMarcaChange(){
+  var surcharge=getMarcaSurcharge();
+  var tip=document.getElementById('marca-tip');
+  if(tip){
+    if(surcharge===0){
+      tip.style.color='var(--grn)';
+      tip.textContent='✓ Porcentajes estándar';
+    } else {
+      tip.style.color='var(--acc)';
+      tip.textContent='+2% adicional aplicado';
+    }
+  }
+  updPct();
+}
+function updPct(){
+  var base=PCT[ENV]&&PCT[ENV][SH]?PCT[ENV][SH]:0;
+  var total=base+getMarcaSurcharge();
+  document.getElementById('pct-v').textContent=total?total.toFixed(2).replace(/\.?0+$/,'')+'%':'—';
+  document.getElementById('pct-d').textContent=ENV_D[ENV]||'';
+}
 function toggleMtx(){var w=document.getElementById('mtx-w');w.style.display=w.style.display==='none'?'block':'none';renderMtx();}
-function renderMtx(){var envs=['liviano','estandar','agresivo'],shs=['1','2','3'],html='';envs.forEach(function(e){html+='<tr><td>'+e.charAt(0).toUpperCase()+e.slice(1)+'</td>';shs.forEach(function(s){var hi=(e===ENV&&s===SH)?' class="hi"':'';html+='<td'+hi+'>'+PCT[e][s].toFixed(1)+'%</td>';});html+='</tr>';});document.getElementById('mtx-body').innerHTML=html;}
+function renderMtx(){var envs=['liviano','estandar','agresivo'],shs=['1','2','3'],html='';var sur=getMarcaSurcharge();envs.forEach(function(e){html+='<tr><td>'+e.charAt(0).toUpperCase()+e.slice(1)+'</td>';shs.forEach(function(s){var hi=(e===ENV&&s===SH)?' class="hi"':'';var val=(PCT[e][s]+sur);html+='<td'+hi+'>'+val.toFixed(2).replace(/\.?0+$/,'')+'%</td>';});html+='</tr>';});document.getElementById('mtx-body').innerHTML=html;}
 
 // DIETA calculation (shared cost split by fleet)
 function getRentalCost(tipoDias){
@@ -578,14 +606,47 @@ function getDieta(dias){
 }
 
 // Travel cost per visit - TOTAL (to be split by fleet later)
-function getTravelTotal(tipoDias){
+function getTravelDetail(tipoDias){
   var dpFld=tipoDias==='p'?'-days-p':'-days-c';
-  var dias,km,rt,b,tr;
-  if(TAB==='c'){dias=parseInt(document.getElementById('c'+dpFld).value)||1;km=parseFloat(document.getElementById('c-km').value)||0;rt=parseFloat(document.getElementById('c-rate').value)||0.26;return km*rt+getDieta(dias)+getRentalCost(tipoDias);}
-  if(TAB==='t'){dias=parseInt(document.getElementById('t'+dpFld).value)||1;b=parseFloat(document.getElementById('t-bill').value)||0;return b+getDieta(dias)+getRentalCost(tipoDias);}
-  if(TAB==='a'){dias=parseInt(document.getElementById('a'+dpFld).value)||1;b=parseFloat(document.getElementById('a-bill').value)||0;tr=parseFloat(document.getElementById('a-trans').value)||0;return b+tr+getDieta(dias)+getRentalCost(tipoDias);}
-  if(TAB==='m'){dias=parseInt(document.getElementById('m'+dpFld).value)||1;return (parseFloat(document.getElementById('m-cost').value)||0)+getRentalCost(tipoDias);}
-  return 0;
+  var dias,km,rt,b,tr,tKm,dieta,hotel,rental;
+  var intl=document.getElementById('es-intl').checked;
+  var dDay=intl?(parseFloat(document.getElementById('dieta-int').value)||150):(parseFloat(document.getElementById('dieta-nac').value)||120);
+  var hotelRate=parseFloat(document.getElementById('hotel').value)||120;
+  rental=getRentalCost(tipoDias);
+  if(TAB==='c'){
+    dias=parseInt(document.getElementById('c'+dpFld).value)||1;
+    km=parseFloat(document.getElementById('c-km').value)||0;
+    rt=parseFloat(document.getElementById('c-rate').value)||1.10;
+    tKm=km*rt; dieta=dDay*dias; hotel=hotelRate*Math.max(0,dias-1);
+    if(tKm===0&&rental===0) return {trans:0,dieta:0,hotel:0,rental:0,total:0,dias:dias,label:'Vehículo: '+km+' km'};
+    return {trans:tKm,dieta:dieta,hotel:hotel,rental:rental,total:tKm+dieta+hotel+rental,dias:dias,label:'Vehículo: '+km+' km × '+rt+'€/km'};
+  }
+  if(TAB==='t'){
+    dias=parseInt(document.getElementById('t'+dpFld).value)||1;
+    b=parseFloat(document.getElementById('t-bill').value)||0;
+    dieta=dDay*dias; hotel=hotelRate*Math.max(0,dias-1);
+    if(b===0&&rental===0) return {trans:0,dieta:0,hotel:0,rental:0,total:0,dias:dias,label:'Tren: '+b+'€'};
+    return {trans:b,dieta:dieta,hotel:hotel,rental:rental,total:b+dieta+hotel+rental,dias:dias,label:'Tren: '+b+'€ ida+vuelta'};
+  }
+  if(TAB==='a'){
+    dias=parseInt(document.getElementById('a'+dpFld).value)||1;
+    b=parseFloat(document.getElementById('a-bill').value)||0;
+    tr=parseFloat(document.getElementById('a-trans').value)||0;
+    dieta=dDay*dias; hotel=hotelRate*Math.max(0,dias-1);
+    if(b===0&&tr===0&&rental===0) return {trans:0,dieta:0,hotel:0,rental:0,total:0,dias:dias,label:'Avión'};
+    return {trans:b+tr,dieta:dieta,hotel:hotel,rental:rental,total:b+tr+dieta+hotel+rental,dias:dias,label:'Avión: '+b+'€ + traslados '+tr+'€'};
+  }
+  if(TAB==='m'){
+    dias=parseInt(document.getElementById('m'+dpFld).value)||1;
+    var mc=parseFloat(document.getElementById('m-cost').value)||0;
+    dieta=dDay*dias; hotel=hotelRate*Math.max(0,dias-1);
+    if(mc===0&&rental===0) return {trans:0,dieta:0,hotel:0,rental:0,total:0,dias:dias,label:'Mixto'};
+    return {trans:mc,dieta:dieta,hotel:hotel,rental:rental,total:mc+dieta+hotel+rental,dias:dias,label:'Mixto: '+mc+'€/visita'};
+  }
+  return {trans:0,dieta:0,hotel:0,rental:0,total:0,dias:1,label:''};
+}
+function getTravelTotal(tipoDias){
+  return getTravelDetail(tipoDias).total;
 }
 
 function recalc(){if(document.getElementById('res').style.display==='none')return;calcular(true);}
@@ -603,7 +664,7 @@ function calcPlan(plan,val,pct,trate,vp,hp,vc,hc,tpvPperAGV,tpvCperAGV,flota){
 function calcular(silent){
   var val=parseFloat(document.getElementById('agv-val').value);
   if(!val||val<=0){if(!silent)alert('Introduce el valor de venta del AGV');return;}
-  var pct=PCT[ENV][SH]||3;
+  var pct=(PCT[ENV][SH]||3)+getMarcaSurcharge();
   var flota=parseInt(document.getElementById('fleet').value)||1;
   var trate=parseFloat(document.getElementById('t-rate').value)||0;
   var vp=parseInt(document.getElementById('v-prev').value)||0;
@@ -614,8 +675,10 @@ function calcular(silent){
   var mttr=parseFloat(document.getElementById('mttr').value)||1.5;
 
   // KEY FIX: travel cost divided by fleet count
-  var travelTotalP=getTravelTotal('p');
-  var travelTotalC=getTravelTotal('c');
+  var detP=getTravelDetail('p');
+  var detC=getTravelDetail('c');
+  var travelTotalP=detP.total;
+  var travelTotalC=detC.total;
   var tpvP=travelTotalP/flota;  // per AGV
   var tpvC=travelTotalC/flota;  // per AGV
 
@@ -624,12 +687,12 @@ function calcular(silent){
   var prm=calcPlan('prm',val,pct,trate,vp,hp,vc,hc,tpvP,tpvC,flota);
   var cur=PLAN==='bas'?bas:PLAN==='std'?std:prm;
 
-  var tipoEl=document.getElementById('agv-type');var tipo=tipoEl.options[tipoEl.selectedIndex]?tipoEl.options[tipoEl.selectedIndex].text:'';var modelo=document.getElementById('agv-modelo').value.trim()||tipo;var cliente=document.getElementById('cliente').value.trim()||'—';
+  var tipoEl=document.getElementById('agv-type');var tipo=tipoEl.options[tipoEl.selectedIndex]?tipoEl.options[tipoEl.selectedIndex].text:'';var modelo=document.getElementById('agv-modelo').value.trim()||tipo;var cliente=document.getElementById('cliente').value.trim()||'—';var marca=document.getElementById('agv-marca').value.trim()||'SYNERSIGHT';
   var origen='',destino='';
   try{origen=document.getElementById('c-org').value||document.getElementById('t-org').value||document.getElementById('a-org').value||document.getElementById('m-org').value;}catch(e){}
   try{destino=document.getElementById('c-dst').value||document.getElementById('t-dst').value||document.getElementById('a-dst').value||document.getElementById('m-dst').value;}catch(e){}
 
-  LAST={val:val,pct:pct,flota:flota,bas:bas,std:std,prm:prm,cur:cur,PLAN:PLAN,vp:vp,vc:vc,hp:hp,hc:hc,trate:trate,tpvP:tpvP,tpvC:tpvC,travelTotalP:travelTotalP,travelTotalC:travelTotalC,mtbf:mtbf,mttr:mttr,modelo:modelo,tipo:tipo,cliente:cliente,origen:origen,destino:destino,fecha:new Date().toLocaleDateString('es-ES'),dietaNac:parseFloat(document.getElementById('dieta-nac').value)||120,dietaInt:parseFloat(document.getElementById('dieta-int').value)||150,hotel:parseFloat(document.getElementById('hotel').value)||120,intl:document.getElementById('es-intl').checked,env:ENV,sh:SH};
+  LAST={val:val,pct:pct,flota:flota,bas:bas,std:std,prm:prm,cur:cur,PLAN:PLAN,vp:vp,vc:vc,hp:hp,hc:hc,trate:trate,tpvP:tpvP,tpvC:tpvC,travelTotalP:travelTotalP,travelTotalC:travelTotalC,detP:detP,detC:detC,mtbf:mtbf,mttr:mttr,modelo:modelo,tipo:tipo,marca:marca,cliente:cliente,origen:origen,destino:destino,fecha:new Date().toLocaleDateString('es-ES'),dietaNac:parseFloat(document.getElementById('dieta-nac').value)||120,dietaInt:parseFloat(document.getElementById('dieta-int').value)||150,hotel:parseFloat(document.getElementById('hotel').value)||120,intl:document.getElementById('es-intl').checked,env:ENV,sh:SH};
 
   document.getElementById('res').style.display='block';
   var fmt=function(n){return n.toLocaleString('es-ES',{minimumFractionDigits:0,maximumFractionDigits:0})+' \u20ac';};
@@ -651,10 +714,17 @@ function calcular(silent){
     (PLAN==='prm'?'<div class="bk-sec">Parte fija</div>'+bkr('#a78bfa','% base ('+pct.toFixed(1)+'% × '+fmt(val)+')',fmt(cur.fxA)):'<div class="bk-sec" style="opacity:.4">Sin parte fija (solo Premium)</div>')+
     '<div class="bk-sec">Preventivo</div>'+
     bkr('#2db87a','MO preventiva ('+hp+'h/visita × '+vp+' vis. × '+trate+'\u20ac/h) <span class="badge badge-g">PREV</span>',fmt(cur.lpA))+
-    bkr('#5dd4a0','Viaje+dietas preventivo — total: '+fmt(travelTotalP*vp)+' ÷ '+flota+' AGVs',fmt(cur.tpA))+
+    bkr('#5dd4a0','Transporte prev. ('+detP.label+') × '+vp+' vis.',fmt(detP.trans*vp/flota))+
+    (detP.dieta>0?bkr('#4fc090','Dietas prev. ('+detP.dieta.toFixed(0)+'€/vis. × '+vp+' vis.) ÷ '+flota+' AGVs',fmt(detP.dieta*vp/flota)):'')+
+    (detP.hotel>0?bkr('#3aad80','Hotel prev. ('+detP.hotel.toFixed(0)+'€/vis. × '+vp+' vis.) ÷ '+flota+' AGVs',fmt(detP.hotel*vp/flota)):'')+
+    (detP.rental>0?bkr('#2db87a','Alquiler coche prev. ('+detP.rental.toFixed(0)+'€/vis. × '+vp+' vis.) ÷ '+flota+' AGVs',fmt(detP.rental*vp/flota)):'')+'<div class="bk-row" style="padding:4px 0 8px"><span class="bk-lbl" style="font-size:11px;opacity:.6">Subtotal viaje+dietas prev. / AGV</span><span class="bk-val" style="font-size:12px">'+fmt(cur.tpA)+'</span></div>'+
     (PLAN!=='bas'?'<div class="bk-sec">Correctivo</div>'+
     bkr('#e05c5c','MO correctiva ('+hc+'h/visita × '+vc+' vis. × '+trate+'\u20ac/h) <span class="badge badge-r">CORR</span>',fmt(cur.lcA))+
-    bkr('#f09090','Viaje+dietas correctivo — total: '+fmt(travelTotalC*vc)+' ÷ '+flota+' AGVs',fmt(cur.tcA)):'<div class="bk-sec" style="opacity:.4">Correctivo no incluido en plan básico</div>')+
+    bkr('#f09090','Transporte corr. ('+detC.label+') × '+vc+' vis.',fmt(detC.trans*vc/flota))+
+    (detC.dieta>0?bkr('#f0a0a0','Dietas corr. ('+detC.dieta.toFixed(0)+'€/vis. × '+vc+' vis.) ÷ '+flota+' AGVs',fmt(detC.dieta*vc/flota)):'')+
+    (detC.hotel>0?bkr('#e88080','Hotel corr. ('+detC.hotel.toFixed(0)+'€/vis. × '+vc+' vis.) ÷ '+flota+' AGVs',fmt(detC.hotel*vc/flota)):'')+
+    (detC.rental>0?bkr('#e05c5c','Alquiler coche corr. ('+detC.rental.toFixed(0)+'€/vis. × '+vc+' vis.) ÷ '+flota+' AGVs',fmt(detC.rental*vc/flota)):'')+
+    '<div class="bk-row" style="padding:4px 0 8px"><span class="bk-lbl" style="font-size:11px;opacity:.6">Subtotal viaje+dietas corr. / AGV</span><span class="bk-val" style="font-size:12px">'+fmt(cur.tcA)+'</span></div>':'<div class="bk-sec" style="opacity:.4">Correctivo no incluido en plan básico</div>')+
     '<div class="bk-row" style="padding-top:10px"><span class="bk-lbl" style="color:var(--txt);font-weight:600">Total anual / AGV</span><span class="bk-val" style="color:var(--acc);font-size:15px">'+fmt(cur.totA)+'</span></div>';
 
   var segs=[{v:cur.fxA,c:'#a78bfa',l:'Base'},{v:cur.lpA,c:'#2db87a',l:'MO prev.'},{v:cur.tpA,c:'#5dd4a0',l:'Viaje prev.'},{v:cur.lcA,c:'#e05c5c',l:'MO corr.'},{v:cur.tcA,c:'#f09090',l:'Viaje corr.'}];
