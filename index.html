@@ -185,7 +185,7 @@ hr.div{border:none;border-top:1px solid var(--bdr);margin:.875rem 0;}
     <div class="hdr-title">Synersight · Calculadora de mantenimiento AGV</div>
     <div class="hdr-sub">let's move together</div>
   </div>
-  <div class="hdr-v">v3.1</div>
+  <div class="hdr-v">v3.2</div>
 </header>
 
 <div class="main">
@@ -807,7 +807,7 @@ function planCard(id,name,color,totA,fmt){return '<div class="plan-result-card '
 function mc(lbl,val,sub,color){return '<div class="mc"><div class="mc-lbl">'+lbl+'</div><div class="mc-val"'+(color?' style="color:'+color+'"':'')+'>'+val+'</div>'+(sub?'<div class="mc-sub">'+sub+'</div>':'')+'</div>';}
 function bkr(color,lbl,val){return '<div class="bk-row"><span class="bk-lbl"><span class="bk-dot" style="background:'+color+'"></span>'+lbl+'</span><span class="bk-val">'+val+'</span></div>';}
 
-// ---- PDF EXPORT — Blob download (no popup blocker) ----
+// ---- PDF EXPORT — print dialog (Save as PDF) ----
 function exportPDF(){
   if(!LAST){alert('Calcula primero los resultados');return;}
   var r=LAST;
@@ -891,16 +891,18 @@ function exportPDF(){
   html+='<div class="ft"><span>'+r.fecha+'</span><span>Calculadora AGV · Synersight</span></div>';
   html+='</div></div></body></html>';
 
-  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');
-  a.href=url;
-  a.download='estimacion-mto-agv-'+r.fecha.replace(/\//g,'-')+'.html';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(function(){URL.revokeObjectURL(url);},2000);
-  alert('Informe exportado en HTML. Ábrelo en el navegador y usa Imprimir > Guardar como PDF si lo necesitas en PDF.');
+  var printWin=window.open('', '_blank');
+  if(!printWin){
+    alert('No se pudo abrir la ventana de impresión. Permite ventanas emergentes para continuar.');
+    return;
+  }
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+  printWin.focus();
+  setTimeout(function(){
+    printWin.print();
+  },300);
 }
 
 // ---- EXCEL EXPORT — self-contained, no CDN needed ----
